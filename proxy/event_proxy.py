@@ -31,8 +31,8 @@ class EventProxy(BaseProxy):
             return JSONResponse(content={"status": "accepted"}, status_code=202)
 
     async def execute_function_with_timeout(self, func_info, event_request, timeout=300):
-        """Executa uma função com timeout"""
+        """Execute function with a timeout"""
         try:
             await asyncio.wait_for(self.execute_function(func_info, event_request), timeout)
         except asyncio.TimeoutError:
-            print(f"Execução da função {func_info.function_name} excedeu o tempo limite de {timeout} segundos")
+            print(f"Execution of function {func_info.function_name} exceeded the time limit of {timeout} seconds")

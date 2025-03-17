@@ -1,6 +1,6 @@
 from fastapi import Request, BackgroundTasks
 from proxy.base_proxy import BaseProxy
-from http_request import HttpRequest
+from LocalRunner.azure_request_type.http_request import HttpRequest
 
 class APIProxy(BaseProxy):
     async def proxy_function(self, request: Request, function_path: str, is_event: bool = False, background_tasks: BackgroundTasks = None):
