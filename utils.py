@@ -2,6 +2,8 @@ import os
 import json
 from typing import Dict, Any, Optional, List
 from fastapi import Response
+from io import BytesIO
+from azure.functions._http import HttpRequest as AzureHttpRequest
 import azure.functions as func
 
 def parse_path_to_function_name(path: str) -> tuple:
@@ -32,30 +34,6 @@ def load_function_json(function_path: str) -> Optional[Dict[str, Any]]:
             return json.load(f)
         except json.JSONDecodeError:
             return None
-
-def is_http_function(function_config: Dict[str, Any]) -> bool:
-    if not function_config or "bindings" not in function_config:
-        return False
-        
-    for binding in function_config["bindings"]:
-        if binding.get("type", "").lower() == "httptrigger":
-            return True
-            
-    return False
-
-def get_http_methods(function_config: Dict[str, Any]) -> List[str]:
-    for binding in function_config["bindings"]:
-        if binding.get("type", "").lower() == "httptrigger":
-            methods = binding.get("methods", ["GET"])
-            return [m.upper() for m in methods]
-    return ["GET"]
-
-def get_route(function_config: Dict[str, Any], function_name: str) -> Optional[str]:
-    for binding in function_config["bindings"]:
-        if binding.get("type", "").lower() == "httptrigger":
-            if "route" in binding:
-                return binding["route"]
-    return None
 
 def extract_route_params(route_template: str, path_parts: List[str]) -> Dict[str, str]:
     if not route_template:
