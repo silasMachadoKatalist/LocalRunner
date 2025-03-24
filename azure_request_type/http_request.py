@@ -1,5 +1,6 @@
 import re
-from typing import Dict, List
+import json
+from typing import Dict, Any
 from fastapi import Request
 import azure.functions as func
 
@@ -30,6 +31,7 @@ class AzureHttpRequest(func.HttpRequest):
     def __init__(self, request: Request, body: bytes, func_info=None):
         self._request = request
         self._body = body
+        self._body_bytes = body
         self._params = {}
         self._headers = {}
         self._route_params = {}
@@ -42,6 +44,7 @@ class AzureHttpRequest(func.HttpRequest):
         self._headers = dict(self._request.headers)
         if not self._body:
             self._body = await self._request.body()
+            self._body_bytes = self._body
 
         # process URL prefix /api/{func_info.project}.{func_info.function_name} if exists
         if self._func_info:
@@ -74,3 +77,6 @@ class AzureHttpRequest(func.HttpRequest):
     @property
     def body(self) -> bytes:
         return self._body
+    
+    def get_json(self) -> Any:
+        return json.loads(self._body.decode('utf-8'))
