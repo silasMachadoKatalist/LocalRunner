@@ -6,10 +6,11 @@ from contextlib import contextmanager
 class ContextExecutionSingleton:
     _pool = {}  # Pool de instâncias, identificadas por (project_dir, main_module)
     
-    def __init__(self, project_dir, main_module):
+    def __init__(self, project_dir, main_module, should_log=False):
         self.project_dir = project_dir
         self.main_module_name = main_module
-        self.modules_to_reload = []
+        self.should_log = should_log
+
         try:
             with self.change_directory(self.project_dir):
                 self.main_module = importlib.import_module(main_module)
@@ -41,7 +42,8 @@ class ContextExecutionSingleton:
                 module = importlib.import_module(module_name)
                 return importlib.reload(module)
             except ImportError as e:
-                print(f"Error reloading module {module_name}: {e}")
+                if self.should_log:
+                    print(f"Error reloading module {module_name}: {e}")
                 return None
 
     def execute(self, azure_request):

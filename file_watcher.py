@@ -4,23 +4,32 @@ from context_execution_singleton import ContextExecutionSingleton
 import os
 
 class FileChangeHandler(FileSystemEventHandler):
-    def __init__(self, executor: ContextExecutionSingleton = ContextExecutionSingleton):
+    def __init__(self, executor: ContextExecutionSingleton = ContextExecutionSingleton, should_log: bool = False):
         self.executor = executor
-        pass
+        self.should_log = should_log
 
     def on_modified(self, event):
-        if event.src_path.endswith(".py"):
+        if not event.src_path.endswith(".py"):
+            return
+
+        if self.should_log:
             print(f"Detected modification in: {event.src_path}")
-            self.reload_module_and_dependencies(event.src_path)
+
+        self.reload_module_and_dependencies(event.src_path)
 
     def on_created(self, event):
-        if event.src_path.endswith(".py"):
+        if not event.src_path.endswith(".py"):
+            return
+
+        if self.should_log:
             print(f"Detected new file: {event.src_path}")
-            self.reload_module_and_dependencies(event.src_path)
+            
+        self.reload_module_and_dependencies(event.src_path)
 
     def reload_module_and_dependencies(self, file_path):
         if "_cache_" in file_path:
-            print(f"Skipping cache file: {file_path}")
+            if self.should_log:
+                print(f"Skipping cache file: {file_path}")
             return
         
         # format the path to be imported
@@ -41,6 +50,7 @@ def start_file_watcher(directories_to_watch, executor):
             observer.schedule(event_handler, path=directory, recursive=True)
         else:
             print(f"Directory does not exist and will be skipped: {directory}")
+
     observer.start()
 
     try:
