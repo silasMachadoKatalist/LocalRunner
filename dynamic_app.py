@@ -2,7 +2,7 @@ import os
 
 from fastapi import FastAPI, Request, BackgroundTasks
 
-from environment import setup_environment, setup_executor, setup_file_watcher
+from environment import DynamicEnvironmentSetup
 from proxy.api_proxy import APIProxy
 from proxy.event_proxy import EventProxy
 
@@ -20,10 +20,11 @@ async def proxy_event_function(request: Request, function_path: str, background_
 
 @app.on_event("startup")
 async def startup_event():
-    setup_environment()
-    setup_executor()
-    setup_file_watcher()
-
+    print("Starting in Dynamic Mode")
+    settuper = DynamicEnvironmentSetup()
+    settuper.setup_environment()
+    settuper.setup_executor()
+    settuper.setup_file_watcher()
 
     port = int(os.getenv("PORT", 3000))
     print("Azure Functions Local Proxy started")
