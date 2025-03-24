@@ -3,36 +3,83 @@ from fastapi import Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 from proxy.base_proxy import BaseProxy
 from LocalRunner.azure_request_type.event_request import EventRequest
+from utils import parse_path_to_function_name
 
 class EventProxy(BaseProxy):
-    async def proxy_function(self, request: Request, function_path: str, is_event: bool = True, background_tasks: BackgroundTasks = None):
-        result = await super().proxy_function(request, function_path, is_event, background_tasks)
+    def __init__(self, request: Request, path: str, background_tasks: BackgroundTasks = None):
+        super().__init__(request, path)
+        self.background_tasks = background_tasks
         
-        if isinstance(result, JSONResponse):
-            return result
-        
-        func_info, route_params, context = result
-        
-        body = await request.json()
-        event_request = EventRequest(body)
-        
-        async_header = request.headers.get("async", "false").lower()
-        timeout_header = request.headers.get("timeout", "300")
+    async def load_function_info(self, function_path: str):
+        """Load the function info and extract the remaining path."""
+        # Usar parse_path_to_function_name para separar o path
+        project, function_name, remaining_path = parse_path_to_function_name(function_path)
+        if not project or not function_name:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Invalid Path: '{function_path}'. Use the format Project.Function"}
+            )
+
+        return await super().load_function_info(f"{project}.{function_name}")
+    
+    async def validate(self, func_info):
+        """Validate the Event request against the function info."""
+        # Verify if the function is Event-triggered
+        if not func_info.is_event():
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Function '{func_info.function_name}' is not an Event-triggered function."}
+            )
+        return None
+
+    async def execution(self, func_info):
+        """Execute the Event function."""
+        body = await self.request.json()
+
+        if not isinstance(body, list):
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Request body must be a list."}
+            )
+
+        sync_header = self.request.headers.get("sync", "false").lower()
+        timeout_header = self.request.headers.get("timeout", "300")
         try:
             timeout = int(timeout_header)
         except ValueError:
             timeout = 300  # Default to 5 minutes if the header is not a valid integer
-        
-        if async_header == "true":
-            background_tasks.add_task(self.execute_function_with_timeout, func_info, event_request, timeout)
-            return JSONResponse(content={"status": "accepted"}, status_code=202)
-        else:
-            await self.execute_function_with_timeout(func_info, event_request, timeout)
-            return JSONResponse(content={"status": "accepted"}, status_code=202)
 
-    async def execute_function_with_timeout(self, func_info, event_request, timeout=300):
-        """Execute function with a timeout"""
+        if sync_header == "true":
+            return await self._execute_sync_mode(func_info, body, timeout)
+        else:
+            return await self._execute_async_mode(func_info, body, timeout)
+
+    async def _execute_sync_mode(self, func_info, body, timeout):
+        """Execute function in synchronous mode."""
+        # Synchronous mode: only allow a single item in the list
+        if len(body) != 1:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Synchronous mode only supports a list with exactly one item."}
+            )
+
+        event_request = EventRequest(body[0])
+        await self.execute_function_with_timeout(event_request, func_info, timeout)
+        return JSONResponse(content=[{"status": "completed"}], status_code=200)
+        
+    async def _execute_async_mode(self, func_info, body, timeout):
+        """Execute function in asynchronous mode."""
+        # Default to asynchronous mode: process all items in the list asynchronously
+        results = []
+        for item in body:
+            event_request = EventRequest(item)
+            self.background_tasks.add_task(self.execute_function_with_timeout, event_request, func_info, timeout)
+            results.append({"status": "accepted", "item": item})
+        return JSONResponse(content=results, status_code=202)
+        
+    async def execute_function_with_timeout(self, event_request, func_info, timeout=300):
+        """Execute function with a timeout."""
         try:
-            await asyncio.wait_for(self.execute_function(func_info, event_request), timeout)
+            await asyncio.wait_for(super().execution(event_request, func_info), timeout)
         except asyncio.TimeoutError:
             print(f"Execution of function {func_info.function_name} exceeded the time limit of {timeout} seconds")
