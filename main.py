@@ -6,20 +6,22 @@ from context_execution_singleton import ContextExecutionSingleton
 
 if __name__ == "__main__":
     project = os.getenv("PROJECT")
+    function = os.getenv("FUNCTION")
     port = int(os.getenv("PORT", 3000))  # Default to port 3000 if PORT is not set
     workspace_folder = os.getenv("PYTHONPATH", os.getcwd())  # Use PYTHONPATH as the workspace folder
     print(f"Workspace Folder: {workspace_folder}")
 
-    app_starter = "project_app:app" if project else "dynamic_app:app"
-    if project:
-        print(f"Starting in Project Mode with PROJECT={project}")
+    app_starter = None
+    if project and function:
+        app_starter = "project_function_app:app"
+    elif project:
+        app_starter = "project_app:app"
     else:
-        print("Starting in Dynamic Mode")
+        app_starter = "dynamic_app:app"
 
     print("Await for the application to start...")
     uvicorn.run(
         app_starter,
         host="0.0.0.0",
-        port=port,
-        reload=True
+        port=port
     )
