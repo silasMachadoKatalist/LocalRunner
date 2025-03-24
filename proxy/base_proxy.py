@@ -2,7 +2,6 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from function_info import FunctionInfo, find_function_info
 from context_execution_singleton import ContextExecutionSingleton as executor
-from utils import azure_response_to_fastapi
 
 class BaseProxy:
     def __init__(self, request: Request, path: str):
@@ -43,11 +42,10 @@ class BaseProxy:
         """Execute the function."""
         # Create the Azure Function context
         try:
-            result = executor.load(
+            return executor.load(
                 project_dir=func_info.project,
                 main_module=f"{func_info.function_name}.{func_info.script_file}".removesuffix(".py")
             ).execute(azure_request)
-            return azure_response_to_fastapi(result)
         except Exception as e:
             import traceback
             traceback.print_exc()
