@@ -69,17 +69,28 @@ class EventProxy(BaseProxy):
         
     async def _execute_async_mode(self, func_info, body, timeout):
         """Execute function in asynchronous mode."""
-        # Default to asynchronous mode: process all items in the list asynchronously
-        results = []
+        
+        tasks = []
         for item in body:
             event_request = EventRequest(item)
-            self.background_tasks.add_task(self.execute_function_with_timeout, event_request, func_info, timeout)
-            results.append({"status": "accepted", "item": item})
-        return JSONResponse(content=results, status_code=202)
+            task = asyncio.create_task(
+            self.execute_function_with_timeout(event_request, func_info, timeout)
+            )
+            tasks.append(task)
+        
+        # Return immediately with a simple acceptance response
+        return JSONResponse(
+            content={"status": "accepted" }, 
+            status_code=200
+        )
         
     async def execute_function_with_timeout(self, event_request, func_info, timeout=300):
         """Execute function with a timeout."""
         try:
-            await asyncio.wait_for(super().execution(event_request, func_info), timeout)
+            asyncio.create_task(
+                asyncio.wait_for(super().execution(event_request, func_info), timeout)
+            )
         except asyncio.TimeoutError:
             print(f"Execution of function {func_info.function_name} exceeded the time limit of {timeout} seconds")
+        except Exception as e:
+            print(f"Unexpected error in function {func_info.function_name}: {e}")
