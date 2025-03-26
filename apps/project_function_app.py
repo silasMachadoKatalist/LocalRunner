@@ -16,10 +16,10 @@ async def proxy_http_function(request: Request, path: str):
     function_path = f"{PROJECT_FUNCTION}/{path}"
     return await APIProxy(request, function_path).proxy_function()
   
-@app.api_route("/event/{path:path}", methods=["POST"])
-async def proxy_event_function(request: Request, path: str, background_tasks: BackgroundTasks):
+@app.api_route("/event", methods=["POST"])
+async def proxy_event_function(request: Request, background_tasks: BackgroundTasks):
     """Endpoint for EventGridTrigger"""
-    function_path = f"{PROJECT_FUNCTION}/{path}"
+    function_path = f"{PROJECT_FUNCTION}"
     return await EventProxy(request, function_path, background_tasks=background_tasks).proxy_function()
 
 @app.on_event("startup")
