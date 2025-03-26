@@ -2,8 +2,6 @@ import os
 import json
 from typing import Dict, Any, Optional, List
 from fastapi import Response
-from io import BytesIO
-from azure.functions._http import HttpRequest as AzureHttpRequest
 import azure.functions as func
 
 def parse_path_to_function_name(path: str) -> tuple:

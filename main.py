@@ -1,8 +1,5 @@
 import os
-from threading import Thread
-from file_watcher import start_file_watcher
 import uvicorn
-from context_execution_singleton import ContextExecutionSingleton
 
 if __name__ == "__main__":
     project = os.getenv("PROJECT")
@@ -13,11 +10,11 @@ if __name__ == "__main__":
 
     app_starter = None
     if project and function:
-        app_starter = "project_function_app:app"
+        app_starter = "apps.project_function_app:app"
     elif project:
-        app_starter = "project_app:app"
+        app_starter = "apps.project_app:app"
     else:
-        app_starter = "dynamic_app:app"
+        app_starter = "apps.dynamic_app:app"
 
     print("Await for the application to start...")
     uvicorn.run(
